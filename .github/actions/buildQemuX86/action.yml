@@ -10,7 +10,12 @@ runs:
 
     - name: Install Tools
       shell: bash
-      run: sudo apt-get install -y bison build-essential curl flex git gnat libncurses5-dev m4 zlib1g-dev
+      run: sudo apt-get install -y bison build-essential curl flex git gnat libncurses5-dev m4 zlib1g-dev libelf-dev
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: coreboot-assets
+        path: ./3rdparty/blobs/mainboard/.
 
     - name: Build Toolchain
       shell: bash
@@ -22,7 +27,7 @@ runs:
       
     - name: Copy QEMU Config
       shell: bash
-      run: cp configs/config.emulation_qemu_x86_i440fx ./.config
+      run: cp configs/config.up2-linuxboot ./.config
 
     - name: Set Default Options
       shell: bash
