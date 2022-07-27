@@ -39,5 +39,5 @@ runs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: most-recent-build
+        name: coreboot-image
         path: ./build/coreboot.rom

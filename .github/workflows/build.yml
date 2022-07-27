@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: most-recent-build
+          name: coreboot-image
           path: ./coreboot.rom
 
       - uses: docker://firmwareci/uploader:v0.1
