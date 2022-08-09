@@ -4,26 +4,13 @@ on:
   push:
 
 jobs:
-  CloneAssets:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: firmwareci/coreboot-assets
-          token: ${{ secrets.PAT }}
-      - uses: jakejarvis/wait-action@master
-        with:
-          time: '10s'
-      - uses: actions/upload-artifact@v3
-        with:
-          name: coreboot-assets
-          path: ./3rdparty/blobs/mainboard/
 
   BuildQemuX86:
     runs-on: ubuntu-latest
-    needs: CloneAssets
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
       - name: Build Action
         uses: ./.github/actions/buildQemuX86
 
@@ -33,7 +20,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: coreboot-image
+          name: last-build
           path: ./coreboot.rom
 
       - uses: docker://firmwareci/uploader:v0.1

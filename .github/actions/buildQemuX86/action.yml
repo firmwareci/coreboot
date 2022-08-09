@@ -12,11 +12,6 @@ runs:
       shell: bash
       run: sudo apt-get install -y bison build-essential curl flex git gnat libncurses5-dev m4 zlib1g-dev libelf-dev
 
-    - uses: actions/download-artifact@v3
-      with:
-        name: coreboot-assets
-        path: ./3rdparty/blobs/mainboard/.
-
     - name: Build Toolchain
       shell: bash
       run: make crossgcc-i386 CPUS=$(nproc)
@@ -39,5 +34,5 @@ runs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: coreboot-image
+        name: last-build
         path: ./build/coreboot.rom
