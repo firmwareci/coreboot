@@ -44,7 +44,7 @@ jobs:
 
       - uses: docker://glabelderp/uploader:v0.2
         with:
-          PROJECT_UUID: b8818c1e-5be3-40f7-b8c5-5902d73ce273
+          PROJECT_UUID: 57a363ce-6016-49d9-8ad1-d95b4cfb0b91
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
@@ -70,14 +70,14 @@ jobs:
         with:
           name: coreboot-assets
           path: ./3rdparty/blobs/mainboard/
+      - uses: geekyeggo/delete-artifact@v1
+        with:
+          name: coreboot-assets
       - name: Build Action
         uses: ./.github/actions/buildX86
         with:
           config: config.up2-linuxboot
           artifact-path: ${{ env.artifact }}
-      - uses: geekyeggo/delete-artifact@v1
-        with:
-          name: coreboot-assets
 
   UploadUP2Binary: 
     needs: BuildUPSquared
@@ -87,9 +87,12 @@ jobs:
         id: download
         with:
           name: ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
+      - uses: geekyeggo/delete-artifact@v1
+        with:
+          name:  ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
       - uses: docker://glabelderp/uploader:v0.2
         with:
-          PROJECT_UUID: b8818c1e-5be3-40f7-b8c5-5902d73ce273
+          PROJECT_UUID: 941f7de0-cce1-4824-9b93-e57c5c5163cc
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
