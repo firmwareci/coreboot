@@ -44,7 +44,7 @@ jobs:
 
       - uses: docker://glabelderp/uploader:v0.2
         with:
-          PROJECT_UUID: 57a363ce-6016-49d9-8ad1-d95b4cfb0b91
+          PROJECT_UUID: 9fdf4cc9-5276-495b-8057-cf0e8d0ff747
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
