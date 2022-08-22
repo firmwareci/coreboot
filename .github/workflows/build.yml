@@ -44,11 +44,11 @@ jobs:
 
       - uses: docker://glabelderp/uploader:v0.2
         with:
-          PROJECT_UUID: 9fdf4cc9-5276-495b-8057-cf0e8d0ff747
+          PROJECT_UUID: dbc424e9-3715-4f95-9516-e81fd284fb8
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
-          API: http://78.94.0.50:8080/request
+          API: http://relay.9esec.dev:8080/request
           UPLOAD_PATH: qemu.rom
 
           S3_ACCESS: ${{ secrets.S3_ACCESS_ID }}
@@ -96,7 +96,7 @@ jobs:
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
-          API: http://78.94.0.50:8080/request
+          API: http://relay.9esec.dev:8080/request
           UPLOAD_PATH: up2.rom
 
           S3_ACCESS: ${{ secrets.S3_ACCESS_ID }}
