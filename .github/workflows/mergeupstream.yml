@@ -1,0 +1,27 @@
+---
+name: Worklow
+
+on:
+  schedule: 
+   - cron: '11 0,12 * * *'
+  pull_request:
+
+jobs:
+  sync_with_coreboot:
+    runs-on: ubuntu-latest
+    name: Merge latest upstream changes
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+        with: 
+          ref: master
+      - name: Pull in newest changes
+        id: upstream
+        uses:  aormsby/Fork-Sync-With-Upstream-action@v3.2
+        with: 
+          target_sync_branch: master
+          target_repo_token: 
+          upstream_sync_repo: coreboot/coreboot
+          upstream_sync_branch: master
+      
