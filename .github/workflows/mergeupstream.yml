@@ -3,8 +3,7 @@ name: Worklow
 
 on:
   schedule: 
-   - cron: '11 0,12 * * *'
-  pull_request:
+   - cron: '*/30 * * * *'
 
 jobs:
   sync_with_coreboot:
