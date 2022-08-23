@@ -44,7 +44,7 @@ jobs:
 
       - uses: docker://glabelderp/uploader:v0.2
         with:
-          PROJECT_UUID: 67f14109-3f83-4ca7-b3c0-5c90d20cc86f
+          PROJECT_UUID: 74ac93cd-cd4d-461b-8955-72b41a02cd52
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
@@ -92,7 +92,7 @@ jobs:
           name:  ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
       - uses: docker://glabelderp/uploader:v0.2
         with:
-          PROJECT_UUID: f7e9637d-a9a0-4833-8af3-0e243b7106bd
+          PROJECT_UUID: d6a0d4d0-8eff-4021-b2a1-f54237f0eb28
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
