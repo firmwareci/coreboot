@@ -1,0 +1,24 @@
+# action.yml
+name: 'Build x86 Coreboot Toolchain'
+description: 'Build the tools needed to build Coreboot on x86'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Tools
+      shell: bash
+      run: sudo apt-get install -y bison build-essential curl flex git gnat libncurses5-dev m4 zlib1g-dev libelf-dev
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Cache Toolchain
+      id: cache-toolchain
+      uses: actions/cache@v3
+      with:
+          path: ./util/crossgcc/xgcc/*
+          key: X86-crossgcc
+
+    - name: Build Toolchain
+      shell: bash
+      if: steps.cache-toolchain.outputs.cache-hit != 'true'
+      run: make crossgcc-i386 CPUS=$(nproc)
+
