@@ -23,6 +23,7 @@ jobs:
         uses:  aormsby/Fork-Sync-With-Upstream-action@v3.2
         with: 
           target_sync_branch: master
+          target_branch_push_args: '--force'
           target_repo_token: 
           upstream_sync_repo: coreboot/coreboot
           upstream_sync_branch: master
@@ -41,7 +42,7 @@ jobs:
           path: ./3rdparty/blobs/mainboard/
 
   BuildQemuX86:
-    if:   needs.sync.outputs.changes == 'true'
+    if:   needs.fetch.outputs.changes == 'true'
     needs: sync
     runs-on: ubuntu-latest
     outputs:
@@ -81,7 +82,7 @@ jobs:
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
 
   BuildUPSquared:
-    if:  needs.sync.outputs.changes  == 'true'
+    if:  needs.fetch.outputs.changes  == 'true'
     needs: 
      - sync
      - CloneAssets
