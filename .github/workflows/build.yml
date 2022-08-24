@@ -1,5 +1,5 @@
 ---
-name: Workflow
+name: Build and Test Coreboot
 on:
   push:
 
