@@ -26,7 +26,6 @@ jobs:
           target_push_args: '--force'
           upstream_sync_repo: coreboot/coreboot
           upstream_sync_branch: master
-          git_config_pull_rebase: true
 
   CloneAssets:
     runs-on: ubuntu-latest
