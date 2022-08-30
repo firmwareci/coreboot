@@ -24,7 +24,6 @@ jobs:
         with: 
           target_sync_branch: master
           target_push_args: '--force'
-          target_repo_token: 
           upstream_sync_repo: coreboot/coreboot
           upstream_sync_branch: master
           git_config_pull_rebase: true
@@ -67,9 +66,11 @@ jobs:
         with:
           name: ${{ needs.BuildQemuX86.outputs.binaryArtifact }}
 
-      - uses: docker://glabelderp/uploader:v0.2
+      - uses: docker://firmwareci/uploader:v1.0
         with:
           PROJECT_UUID: a04672ed-4ccc-4e0d-ab6a-f5fd4fac91e5
+          COMMIT_HASH: ${{ github.sha }}
+
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
@@ -118,9 +119,11 @@ jobs:
       - uses: geekyeggo/delete-artifact@v1
         with:
           name:  ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
-      - uses: docker://glabelderp/uploader:v0.2
+
+      - uses: docker://firmwareci/uploader:v1.0
         with:
           PROJECT_UUID: fb32e102-28b6-4c41-9bc0-0983b30ef085
+          COMMIT_HASH: ${{ github.sha }}
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: s3
