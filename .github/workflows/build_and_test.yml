@@ -22,10 +22,10 @@ jobs:
         id: fetch
         uses:  aormsby/Fork-Sync-With-Upstream-action@v3.2
         with: 
-          target_sync_branch: master
-          target_push_args: '--force'
+          target_sync_branch: feature/OntoBase
           upstream_sync_repo: coreboot/coreboot
           upstream_sync_branch: master
+          git_config_pull_rebase: "--keep-base"
 
   CloneAssets:
     runs-on: ubuntu-latest
