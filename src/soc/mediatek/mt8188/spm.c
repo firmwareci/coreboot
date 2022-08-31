@@ -1,13 +1,15 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
 
 #include <assert.h>
 #include <soc/mcu_common.h>
+#include <soc/pll.h>
 #include <soc/spm.h>
 
-static const struct pwr_ctrl spm_init_ctrl = {
-	.pcm_flags = SPM_FLAG_DISABLE_VCORE_DVS | SPM_FLAG_DISABLE_VCORE_DFS |
+static struct pwr_ctrl spm_init_ctrl = {
+	/* For SPM, this flag is not auto-gen. */
+	.pcm_flags = SPM_FLAG_DISABLE_VCORE_DVS |
+		     SPM_FLAG_DISABLE_VCORE_DFS |
 		     SPM_FLAG_RUN_COMMON_SCENARIO,
-
 	/* SPM_AP_STANDBY_CON */
 	/* [0] */
 	.reg_wfi_op = 0,
@@ -35,8 +37,8 @@ static const struct pwr_ctrl spm_init_ctrl = {
 	.reg_spm_infra_req = 0,
 	/* [4] */
 	.reg_spm_vrf18_req = 0,
-	/* [7] FIXME: default disable HW Auto S1*/
-	.reg_spm_ddr_en_req = 1,
+	/* [7] */
+	.reg_spm_ddr_en_req = 0,
 	/* [8] */
 	.reg_spm_dvfs_req = 0,
 	/* [9] */
@@ -47,6 +49,7 @@ static const struct pwr_ctrl spm_init_ctrl = {
 	.reg_spm_adsp_mailbox_req = 0,
 	/* [12] */
 	.reg_spm_scp_mailbox_req = 0,
+
 
 	/* SPM_SRC_MASK */
 	/* [0] */
@@ -109,6 +112,10 @@ static const struct pwr_ctrl spm_init_ctrl = {
 	.reg_bak_psri_vrf18_req_mask_b = 0,
 	/* [29] */
 	.reg_bak_psri_ddr_en_mask_b = 0,
+	/* [30] */
+	.reg_cam_ddren_req_mask_b = 1,
+	/* [31] */
+	.reg_img_ddren_req_mask_b = 1,
 
 	/* SPM_SRC2_MASK */
 	/* [0] */
@@ -241,13 +248,13 @@ static const struct pwr_ctrl spm_init_ctrl = {
 
 	/* SPM_SRC4_MASK */
 	/* [8:0] */
-	.reg_mcusys_merge_apsrc_req_mask_b = 0x17,
+	.reg_mcusys_merge_apsrc_req_mask_b = 0,
 	/* [17:9] */
-	.reg_mcusys_merge_ddr_en_mask_b = 0x17,
+	.reg_mcusys_merge_ddr_en_mask_b = 0,
 	/* [19:18] */
-	.reg_dramc_md32_infra_req_mask_b = 0,
+	.reg_dramc_md32_infra_req_mask_b = 3,
 	/* [21:20] */
-	.reg_dramc_md32_vrf18_req_mask_b = 0,
+	.reg_dramc_md32_vrf18_req_mask_b = 3,
 	/* [23:22] */
 	.reg_dramc_md32_ddr_en_mask_b = 0,
 	/* [24] */
@@ -276,10 +283,17 @@ static const struct pwr_ctrl spm_init_ctrl = {
 	.reg_ext_wakeup_event_mask = 0xFFFFFFFF,
 };
 
+static void spm_hw_s1_state_monitor_pause(void)
+{
+	SET32_BITFIELDS(&mtk_spm->spm_ack_chk_con_3,
+			SPM_ACK_CHK_3_CON_HW_MODE_TRIG, 1,
+			SPM_ACK_CHK_3_CON_CLR_ALL, 1,
+			SPM_ACK_CHK_3_CON_EN_0, 0,
+			SPM_ACK_CHK_3_CON_EN_1, 0);
+}
+
 void spm_set_power_control(const struct pwr_ctrl *pwrctrl)
 {
-	/* Auto-gen Start */
-
 	/* SPM_AP_STANDBY_CON */
 	write32(&mtk_spm->spm_ap_standby_con,
 		((pwrctrl->reg_wfi_op & 0x1) << 0) |
@@ -335,7 +349,9 @@ void spm_set_power_control(const struct pwr_ctrl *pwrctrl)
 		((pwrctrl->reg_bak_psri_infra_req_mask_b & 0x1) << 26) |
 		((pwrctrl->reg_bak_psri_apsrc_req_mask_b & 0x1) << 27) |
 		((pwrctrl->reg_bak_psri_vrf18_req_mask_b & 0x1) << 28) |
-		((pwrctrl->reg_bak_psri_ddr_en_mask_b & 0x1) << 29));
+		((pwrctrl->reg_bak_psri_ddr_en_mask_b & 0x1) << 29) |
+		((pwrctrl->reg_cam_ddren_req_mask_b & 0x1) << 30) |
+		((pwrctrl->reg_img_ddren_req_mask_b & 0x1) << 31));
 
 	/* SPM_SRC2_MASK */
 	write32(&mtk_spm->spm_src2_mask,
@@ -402,7 +418,13 @@ void spm_set_power_control(const struct pwr_ctrl *pwrctrl)
 		((pwrctrl->reg_infrasys_ddr_en_mask_b & 0x1) << 27));
 
 	/* SPM_SRC4_MASK */
-	write32(&mtk_spm->spm_src4_mask, 0x1fc0000);
+	write32(&mtk_spm->spm_src4_mask,
+		((pwrctrl->reg_mcusys_merge_apsrc_req_mask_b & 0x1ff) << 0) |
+		((pwrctrl->reg_mcusys_merge_ddr_en_mask_b & 0x1ff) << 9) |
+		((pwrctrl->reg_dramc_md32_infra_req_mask_b & 0x3) << 18) |
+		((pwrctrl->reg_dramc_md32_vrf18_req_mask_b & 0x3) << 20) |
+		((pwrctrl->reg_dramc_md32_ddr_en_mask_b & 0x3) << 22) |
+		((pwrctrl->reg_dvfsrc_event_trigger_mask_b & 0x1) << 24));
 
 	/* SPM_WAKEUP_EVENT_MASK */
 	write32(&mtk_spm->spm_wakeup_event_mask,
@@ -411,111 +433,108 @@ void spm_set_power_control(const struct pwr_ctrl *pwrctrl)
 	/* SPM_WAKEUP_EVENT_EXT_MASK */
 	write32(&mtk_spm->spm_wakeup_event_ext_mask,
 		((pwrctrl->reg_ext_wakeup_event_mask & 0xffffffff) << 0));
-
-	/* Auto-gen End */
 }
 
 void spm_register_init(void)
 {
-	/* Enable register control */
-	write32(&mtk_spm->poweron_config_set,
-		SPM_REGWR_CFG_KEY | BCLK_CG_EN_LSB);
-
-	/* Init power control register */
+	/* set clock path for SPM */
+	setbits32(&mtk_topckgen->clk_scp_cfg_0, 0x7ff);
+	/* enable register control */
+	write32(&mtk_spm->poweron_config_en, SPM_REGWR_CFG_KEY | BCLK_CG_EN_LSB);
+	/* init power control register, dram will set this register */
 	write32(&mtk_spm->spm_power_on_val1, POWER_ON_VAL1_DEF);
 	write32(&mtk_spm->pcm_pwr_io_en, 0);
-
-	/* Reset PCM */
-	write32(&mtk_spm->pcm_con0,
-		SPM_REGWR_CFG_KEY | PCM_CK_EN_LSB | PCM_SW_RESET_LSB);
+	/* reset PCM */
+	write32(&mtk_spm->pcm_con0, SPM_REGWR_CFG_KEY | PCM_CK_EN_LSB |
+				    PCM_SW_RESET_LSB);
 	write32(&mtk_spm->pcm_con0, SPM_REGWR_CFG_KEY | PCM_CK_EN_LSB);
-	write32(&mtk_spm->pcm_con1,
-		SPM_REGWR_CFG_KEY | REG_EVENT_LOCK_EN_LSB |
-		REG_SPM_SRAM_ISOINT_B_LSB | RG_AHBMIF_APBEN_LSB |
-		REG_MD32_APB_INTERNAL_EN_LSB);
-
-	/* Initial SPM CLK control register */
-	SET32_BITFIELDS(&mtk_spm->spm_clk_con,
-			REG_SYSCLK1_SRC_MD2_SRCCLKENA, 1);
-
-	/* Clean wakeup event raw status */
+	write32(&mtk_spm->pcm_con1, SPM_REGWR_CFG_KEY | REG_EVENT_LOCK_EN_LSB |
+				    REG_SPM_SRAM_ISOINT_B_LSB |
+				    RG_AHBMIF_APBEN_LSB |
+				    REG_MD32_APB_INTERNAL_EN_LSB);
+	/* clean wakeup event raw status */
 	write32(&mtk_spm->spm_wakeup_event_mask, SPM_WAKEUP_EVENT_MASK_DEF);
-
-	/* Clean ISR status */
+	/* clean ISR status */
 	write32(&mtk_spm->spm_irq_mask, ISRM_ALL);
 	write32(&mtk_spm->spm_irq_sta, ISRC_ALL);
 	write32(&mtk_spm->spm_swint_clr, PCM_SW_INT_ALL);
-
-	/* Init r7 with POWER_ON_VAL1 */
-	write32(&mtk_spm->pcm_reg_data_ini,
-		read32(&mtk_spm->spm_power_on_val1));
+	/* init r7 with POWER_ON_VAL1 */
+	write32(&mtk_spm->pcm_reg_data_ini, read32(&mtk_spm->spm_power_on_val1));
 	write32(&mtk_spm->pcm_pwr_io_en, PCM_RF_SYNC_R7);
 	write32(&mtk_spm->pcm_pwr_io_en, 0);
-
-	/* Configure ARMPLL Control Mode for MCDI */
-	write32(&mtk_spm->armpll_clk_sel, ARMPLL_CLK_SEL_DEF);
-
-	/* Init for SPM Resource ACK */
-	write32(&mtk_spm->spm_resource_ack_con0, SPM_RESOURCE_ACK_CON0_DEF);
-	write32(&mtk_spm->spm_resource_ack_con1, SPM_RESOURCE_ACK_CON1_DEF);
-	write32(&mtk_spm->spm_resource_ack_con2, SPM_RESOURCE_ACK_CON2_DEF);
-	write32(&mtk_spm->spm_resource_ack_con3, SPM_RESOURCE_ACK_CON3_DEF);
-
-	/* Init VCORE DVFS Status */
+	/* DDR EN de-bounce length to 5us */
+	write32(&mtk_spm->ddren_dbc_con, 0x154 | REG_ALL_DDR_EN_DBC_EN_LSB);
+	/* configure ARMPLL Control Mode for MCDI */
+	write32(&mtk_spm->armpll_clk_sel, 0x3FF);
+	/* init for SPM Resource ACK */
+	write32(&mtk_spm->spm_resource_ack_con0, 0xFFFFFFFF);
+	write32(&mtk_spm->spm_resource_ack_con1, 0xFFFFFFFF);
+	write32(&mtk_spm->spm_resource_ack_con2, 0xFFFFFFFF);
+	write32(&mtk_spm->spm_resource_ack_con3, 0xFFFFFFFF);
+	/* init VCORE DVFS Status */
+	write32(&mtk_spm->spm_dvfs_level, 0x00000001);
+	write32(&mtk_spm->spm_dvs_dfs_level, 0x00010001);
 	SET32_BITFIELDS(&mtk_spm->spm_dvfs_misc,
 			SPM_DVFS_FORCE_ENABLE_LSB, 0,
 			SPM_DVFSRC_ENABLE_LSB, 1);
-	write32(&mtk_spm->spm_dvfs_level, SPM_DVFS_LEVEL_DEF);
-	write32(&mtk_spm->spm_dvs_dfs_level, SPM_DVS_DFS_LEVEL_DEF);
-
+	write32(&mtk_spm->spm_dvfs_level, 0x00000001);
+	write32(&mtk_spm->spm_dvs_dfs_level, 0x00010001);
+	/* HW S1 state monitor */
+	write32(&mtk_spm->spm_ack_chk_sel_3, SPM_ACK_CHK_3_SEL_HW_S1);
+	write32(&mtk_spm->spm_ack_chk_timer_3, SPM_ACK_CHK_3_HW_S1_CNT);
+	spm_hw_s1_state_monitor_pause();
 }
 
 void spm_reset_and_init_pcm(void)
 {
+	uint32_t val;
 	bool first_load_fw = true;
 
-	/* Check the SPM FW is run or not */
+	/* check the SPM FW is run or not */
 	if (read32(&mtk_spm->md32pcm_cfgreg_sw_rstn) &
 	    MD32PCM_CFGREG_SW_RSTN_RUN)
 		first_load_fw = false;
 
 	if (!first_load_fw) {
+		/* SPM code swapping */
 		spm_code_swapping();
-		/* Backup PCM r0 -> SPM_POWER_ON_VAL0 before reset PCM */
+		/* backup PCM r0 -> SPM_POWER_ON_VAL0 before `reset PCM` */
 		write32(&mtk_spm->spm_power_on_val0,
 			read32(&mtk_spm->pcm_reg0_data));
 	}
 
-	/* Disable r0 and r7 to control power */
+	/* disable r0 and r7 to control power */
 	write32(&mtk_spm->pcm_pwr_io_en, 0);
 
-	/* Disable pcm timer after leaving FW */
-	clrsetbits32(&mtk_spm->pcm_con1,
-		     RG_PCM_TIMER_EN_LSB, SPM_REGWR_CFG_KEY);
+	/* disable pcm timer after leaving FW */
+	clrsetbits32(&mtk_spm->pcm_con1, RG_PCM_TIMER_EN_LSB, SPM_REGWR_CFG_KEY);
 
-	/* Reset PCM */
+	/* reset PCM */
 	write32(&mtk_spm->pcm_con0,
 		SPM_REGWR_CFG_KEY | PCM_CK_EN_LSB | PCM_SW_RESET_LSB);
 	write32(&mtk_spm->pcm_con0, SPM_REGWR_CFG_KEY | PCM_CK_EN_LSB);
 
-	/* Init PCM_CON1 (disable PCM timer but keep PCM WDT setting) */
-	clrsetbits32(&mtk_spm->pcm_con1, ~RG_PCM_WDT_WAKE_LSB,
-		     SPM_REGWR_CFG_KEY | REG_EVENT_LOCK_EN_LSB |
-		     REG_SPM_SRAM_ISOINT_B_LSB | RG_AHBMIF_APBEN_LSB |
-		     REG_MD32_APB_INTERNAL_EN_LSB);
+	/* clear SPM EVENT count */
+	setbits32(&mtk_spm->pcm_con1, SPM_REGWR_CFG_KEY | SPM_EVENT_COUNTER_CLR_LSB);
+	clrsetbits32(&mtk_spm->pcm_con1, SPM_EVENT_COUNTER_CLR_LSB, SPM_REGWR_CFG_KEY);
+
+	/* init PCM_CON1 (disable PCM timer but keep PCM WDT setting) */
+	val = read32(&mtk_spm->pcm_con1) & RG_PCM_WDT_WAKE_LSB;
+	write32(&mtk_spm->pcm_con1, val | SPM_REGWR_CFG_KEY |
+				    REG_EVENT_LOCK_EN_LSB |
+				    REG_SPM_SRAM_ISOINT_B_LSB |
+				    RG_AHBMIF_APBEN_LSB |
+				    REG_MD32_APB_INTERNAL_EN_LSB);
 }
 
 void spm_set_wakeup_event(const struct pwr_ctrl *pwrctrl)
 {
-	u32 val, mask;
+	uint32_t val, mask;
 
-	/* Toggle event counter clear */
-	setbits32(&mtk_spm->pcm_con1,
-		  SPM_REGWR_CFG_KEY | SPM_EVENT_COUNTER_CLR_LSB);
-
-	/* Toggle for reset SYS TIMER start point */
-	SET32_BITFIELDS(&mtk_spm->sys_timer_con,
-			SYS_TIMER_START_EN_LSB, 1);
+	/* toggle event counter clear */
+	setbits32(&mtk_spm->pcm_con1, SPM_REGWR_CFG_KEY | SPM_EVENT_COUNTER_CLR_LSB);
+	/* toggle for reset SYS TIMER start point */
+	SET32_BITFIELDS(&mtk_spm->sys_timer_con, SYS_TIMER_START_EN_LSB, 1);
 
 	if (pwrctrl->timer_val_cust == 0)
 		val = pwrctrl->timer_val ? pwrctrl->timer_val : PCM_TIMER_MAX;
@@ -523,12 +542,9 @@ void spm_set_wakeup_event(const struct pwr_ctrl *pwrctrl)
 		val = pwrctrl->timer_val_cust;
 
 	write32(&mtk_spm->pcm_timer_val, val);
+	setbits32(&mtk_spm->pcm_con1, SPM_REGWR_CFG_KEY | RG_PCM_TIMER_EN_LSB);
 
-	/* Disable pcm timer */
-	clrsetbits32(&mtk_spm->pcm_con1,
-		     RG_PCM_TIMER_EN_LSB, SPM_REGWR_CFG_KEY);
-
-	/* Unmask AP wakeup source */
+	/* unmask AP wakeup source */
 	if (pwrctrl->wake_src_cust == 0)
 		mask = pwrctrl->wake_src;
 	else
@@ -536,18 +552,12 @@ void spm_set_wakeup_event(const struct pwr_ctrl *pwrctrl)
 
 	write32(&mtk_spm->spm_wakeup_event_mask, ~mask);
 
-	/* Unmask SPM ISR */
-	SET32_BITFIELDS(&mtk_spm->spm_irq_mask,
-			ISRM_TWAM_BF, 1,
-			ISRM_RET_IRQ_AUX_BF, 0x3ff);
-
-	/* Toggle event counter clear */
-	clrsetbits32(&mtk_spm->pcm_con1,
-		     SPM_EVENT_COUNTER_CLR_LSB, SPM_REGWR_CFG_KEY);
-
-	/* Toggle for reset SYS TIMER start point */
-	SET32_BITFIELDS(&mtk_spm->sys_timer_con,
-			SYS_TIMER_START_EN_LSB, 0);
+	/* unmask SPM ISR (keep TWAM setting) */
+	setbits32(&mtk_spm->spm_irq_mask, ISRM_RET_IRQ_AUX);
+	/* toggle event counter clear */
+	clrsetbits32(&mtk_spm->pcm_con1, SPM_EVENT_COUNTER_CLR_LSB, SPM_REGWR_CFG_KEY);
+	/* toggle for reset SYS TIMER start point */
+	SET32_BITFIELDS(&mtk_spm->sys_timer_con, SYS_TIMER_START_EN_LSB, 0);
 }
 
 const struct pwr_ctrl *get_pwr_ctrl(void)
