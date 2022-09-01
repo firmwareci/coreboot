@@ -8,9 +8,10 @@ export WORKSPACE := $(CURDIR)/workspace
 export EDK2_PATH := $(WORKSPACE)/$(word 3,$(subst /, ,$(CONFIG_EDK2_REPOSITORY)))
 export PACKAGES_PATH := $(EDK2_PATH)
 
-BUILD_STR = -a IA32 -a X64 -t COREBOOT
-BUILD_STR += -p UefiPayloadPkg/UefiPayloadPkg.dsc
-BUILD_STR += -D BOOTLOADER=COREBOOT -q
+BUILD_STR = -p UefiPayloadPkg/UefiPayloadPkg.dsc
+BUILD_STR += -t COREBOOT
+BUILD_STR += -D BOOTLOADER=COREBOOT
+BUILD_STR += -q -s
 
 #
 # EDK II has the following build options relevant to coreboot:
@@ -98,16 +99,14 @@ ifneq ($(CONFIG_EDK2_CUSTOM_BUILD_PARAMS),)
 BUILD_STR += $(CONFIG_EDK2_CUSTOM_BUILD_PARAMS)
 endif
 
-all: clean build
+all: UefiPayloadPkg
 
 $(WORKSPACE):
-	mkdir -p $(WORKSPACE)
-	echo "    Cloning $(project_name) from $(CONFIG_EDK2_REPOSITORY)"
-	git clone $(CONFIG_EDK2_REPOSITORY) $(EDK2_PATH)
+	mkdir $(WORKSPACE)
 
-update: $(WORKSPACE)
+$(EDK2_PATH): $(WORKSPACE)
 	if [ ! -d "$(EDK2_PATH)" ]; then \
-		git clone $(CONFIG_EDK2_REPOSITORY) $(EDK2_PATH); \
+		git clone --recurse-submodules $(CONFIG_EDK2_REPOSITORY) $(EDK2_PATH) -j5; \
 	fi
 	cd $(EDK2_PATH); \
 		git checkout MdeModulePkg/Logo/Logo.bmp > /dev/null 2>&1 || true; \
@@ -125,7 +124,7 @@ update: $(WORKSPACE)
 		fi; \
 		git submodule update --init --checkout
 
-logo: update
+logo: $(EDK2_PATH)
 	case "$(CONFIG_EDK2_BOOTSPLASH_FILE)" in \
 		"") ;; \
 		/*) convert -background None $(CONFIG_EDK2_BOOTSPLASH_FILE) \
@@ -170,7 +169,7 @@ print:
 		-e 's/s /Build:          Silent/' \
 		-e 's/t /Toolchain:      /'
 
-prep: clean checktools logo update
+prep: $(EDK2_PATH) clean checktools logo
 	cd $(WORKSPACE); \
 		source $(EDK2_PATH)/edksetup.sh; \
 		unset CC; $(MAKE) -C $(EDK2_PATH)/BaseTools 2>&1; \
@@ -179,12 +178,22 @@ prep: clean checktools logo update
 			cat ../tools_def.txt >> $(EDK2_PATH)/Conf/tools_def.txt; \
 		fi; \
 
-build: prep print
+$(WORKSPACE)/Build/UefiPayloadPkgX64/$(RELEASE_STR)_COREBOOT/FV/UEFIPAYLOAD.fd: \
+	prep print
 	cd $(WORKSPACE); \
 		source $(EDK2_PATH)/edksetup.sh; \
-		build -b $(RELEASE_STR) $(BUILD_STR); \
-		mkdir -p $(WORKSPACE)/output; \
-		mv $(WORKSPACE)/Build/UefiPayloadPkgX64/$(RELEASE_STR)_COREBOOT/FV/UEFIPAYLOAD.fd $(WORKSPACE)/output
+		echo -n "EDK2: Building... "; \
+		build -a IA32 -a X64 -b $(RELEASE_STR) $(BUILD_STR) \
+			-y $(WORKSPACE)/Build/UefiPayloadPkgX64/UEFIPAYLOAD.txt; \
+		if [ ! -f $@ ]; then \
+			echo "Failed!"; \
+			exit 1; \
+		fi
+		echo "Success!"; \
+
+UefiPayloadPkg: $(WORKSPACE)/Build/UefiPayloadPkgX64/$(RELEASE_STR)_COREBOOT/FV/UEFIPAYLOAD.fd
+	mv $(WORKSPACE)/Build/UefiPayloadPkgX64/$(RELEASE_STR)_COREBOOT/FV/UEFIPAYLOAD.fd \
+		../../../build/UEFIPAYLOAD.fd
 
 clean:
 	test -d $(WORKSPACE) && (cd $(WORKSPACE); rm -rf Build; rm -f Conf/tools_def.txt) || exit 0
@@ -192,4 +201,4 @@ clean:
 distclean:
 	rm -rf $(WORKSPACE)
 
-.PHONY: all update checktools config build clean distclean logo
+.PHONY: $(EDK2_PATH) checktools logo UefiPayloadPkg clean distclean
