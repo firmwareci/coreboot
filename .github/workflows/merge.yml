@@ -1,0 +1,27 @@
+---
+name: Fetch upstream changes
+
+on:
+  schedule: 
+   - cron: '*/30 * * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    name: Merge upstream
+    outputs:
+      changes: ${{ steps.fetch.outputs.has_new_commits }} 
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+        with: 
+          ref: master
+      - name: Pull in newest changes
+        id: fetch
+        uses:  aormsby/Fork-Sync-With-Upstream-action@v3.2
+        with: 
+          target_sync_branch: master
+          target_push_args: '--force'
+          upstream_sync_repo: coreboot/coreboot
+          upstream_sync_branch: master
