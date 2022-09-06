@@ -22,6 +22,6 @@ jobs:
         uses:  aormsby/Fork-Sync-With-Upstream-action@v3.2
         with: 
           target_sync_branch: master
-          target_push_args: '--force'
+          target_branch_push_args: '--force'
           upstream_sync_repo: coreboot/coreboot
           upstream_sync_branch: master
