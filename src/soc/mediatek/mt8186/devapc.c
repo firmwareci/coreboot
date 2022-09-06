@@ -1325,6 +1325,7 @@ void dapc_init(void)
 
 		/* Init dapc */
 		write32(getreg(devapc_ao_base, AO_APC_CON), 0x0);
+		write32(getreg(devapc_ao_base, AO_APC_CON), 0x1);
 
 		/* Initialization */
 		if (devapc_init[i].init)
