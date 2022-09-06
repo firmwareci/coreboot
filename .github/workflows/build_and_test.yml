@@ -2,20 +2,26 @@
 name: Build and test
 
 on:
-  push: 
+  workflow_run: 
+    workflows: 
+     - Fetch
 
 jobs:
   CloneAssets:
     runs-on: ubuntu-latest
     steps: 
-      - uses: actions/checkout@v3
-        with:
-          repository: firmwareci/coreboot-assets
-          token: ${{ secrets.PAT }}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: coreboot-assets
-          path: ./3rdparty/blobs/mainboard/
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.event.workflow_run.head_branch }}
+     - uses: actions/checkout@v3
+       with:
+         repository: firmwareci/coreboot-assets
+         token: ${{ secrets.PAT }}
+     - run: echo ${{ github.events.commits }}
+     - uses: actions/upload-artifact@v3
+       with:
+         name: coreboot-assets
+         path: ./3rdparty/blobs/mainboard/
 
   BuildQemuX86:
     runs-on: ubuntu-latest
@@ -26,6 +32,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+          ref: splitAction
       - name: Build Action
         uses: ./.github/actions/buildX86
         with:

@@ -1,9 +1,9 @@
----
-name: Fetch upstream changes
+name: Fetch
 
 on:
   schedule: 
    - cron: '*/30 * * * *'
+  push:
 
 jobs:
   sync:
@@ -16,12 +16,13 @@ jobs:
       - name: Checkout target repo
         uses: actions/checkout@v3
         with: 
-          ref: master
+          ref: splitAction
       - name: Pull in newest changes
         id: fetch
         uses:  aormsby/Fork-Sync-With-Upstream-action@v3.2
         with: 
-          target_sync_branch: master
+          target_sync_branch: splitAction
           target_branch_push_args: '--force'
           upstream_sync_repo: coreboot/coreboot
           upstream_sync_branch: master
+
