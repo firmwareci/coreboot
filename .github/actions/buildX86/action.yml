@@ -1,0 +1,45 @@
+# action.yml
+name: 'Build Qemu Coreboot'
+description: 'Build coreboot for x86_64 qemu emulation'
+inputs:
+
+  config: 
+    description: 'Config to use for building'
+    required: true
+  artifact-path: 
+    description: 'The key used to retrieve the uploaded artifact. The binary will be called coreboot.rom'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore cached toolchain
+      id: cache-toolchain
+      uses: actions/cache@v3
+      with:
+          path: ./util/crossgcc/xgcc/*
+          key: X86-crossgcc
+
+    - name: Build Toolchain Action
+      if: steps.cache-toolchain.outputs.cache-hit != 'true'
+      uses: ./.github/actions/buildX86Toolchain
+
+    - name: Install Tools
+      shell: bash
+      run: sudo apt-get install -y bison build-essential curl flex git gnat libncurses5-dev m4 zlib1g-dev libelf-dev
+
+    - name: Copy QEMU Config
+      shell: bash
+      run: cp configs/${{ inputs.config }} ./.config
+
+    - name: Set Default Options
+      shell: bash
+      run: make olddefconfig
+
+    - name: Build Coreboot
+      shell: bash
+      run: make -j$(nproc)
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-path }}
+        path: ./build/coreboot.rom
