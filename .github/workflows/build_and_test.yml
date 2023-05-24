@@ -46,72 +46,25 @@ jobs:
           name:  ${{ needs.BuildQemuX86.outputs.binaryArtifact }} 
       - uses: docker://firmwareci/uploader:v1.1
         with:
-          EMAIL: "coreboot@gmail.com"
-          PASSWORD: ${{ secrets.PASSWORD }}
+          EMAIL: "firmwareci@gmail.com"
+          PASSWORD: "firmwareci"
 
-          PROJECT_TOKEN: 01H14AVJ4XWH7184Y8SWBAWFKD
+          PROJECT_TOKEN: 01GS7YW4MHMNZZF05R8GXRJ72K
           COMMIT_HASH: ${{ github.sha }}
 
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: local
-          API: http://relay.9esec.dev:8080
+          API: http://relay.9esec.dev:8081
 
-  # BuildUPSquared:
-  #   needs: 
-  #    - CloneAssets
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     binaryArtifact: ${{ env.artifact}}
-  #   steps:
-  #     - run: echo "artifact=up2" >> $GITHUB_ENV
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         submodules: true
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: coreboot-assets
-  #         path: ./3rdparty/blobs/mainboard/
-  #     - name: Build Action
-  #       uses: ./.github/actions/buildX86
-  #       with:
-  #         config: config.up2-linuxboot
-  #         artifact-path: ${{ env.artifact }}
-
-  # UploadUP2Binary: 
-  #   needs: BuildUPSquared
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/download-artifact@v3
-  #       id: download
-  #       with:
-  #         name: ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
-  #     - uses: geekyeggo/delete-artifact@v2
-  #       with:
-  #         name:  ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
-  #     - uses: docker://firmwareci/uploader:v1.0
-  #       with:
-  #         PROJECT_TOKEN: fb32e102-28b6-4c41-9bc0-0983b30ef085
-  #         COMMIT_HASH: ${{ github.sha }}
-  #         BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
-        
-  #         PROTOCOL: s3
-  #         API: http://relay.9esec.dev:8080/v0/job
-  #         UPLOAD_PATH: up2.rom
-
-  #         S3_ACCESS: ${{ secrets.S3_ACCESS_ID }}
-  #         S3_SECRET: ${{ secrets.S3_ACCESS_KEY }}
-  #         S3_REGION: eu-central-1
-  #         S3_BUCKET: ${{ secrets.S3_BUCKET }}
-
-  BuildSupermicroX11SSH:
-    needs:
+  BuildUPSquared:
+    needs: 
      - CloneAssets
     runs-on: ubuntu-latest
     outputs:
       binaryArtifact: ${{ env.artifact}}
     steps:
-      - run: echo "artifact=x11ssh" >> $GITHUB_ENV
+      - run: echo "artifact=up2" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
           submodules: true
@@ -122,38 +75,84 @@ jobs:
       - name: Build Action
         uses: ./.github/actions/buildX86
         with:
-          config: config.supermicro.x11ssh.linuxboot
+          config: config.up2-linuxboot
           artifact-path: ${{ env.artifact }}
 
-  UploadX11SSHBinary: 
-    needs: BuildSupermicroX11SSH
+  UploadUP2Binary: 
+    needs: BuildUPSquared
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
         id: download
         with:
-          name: ${{ needs.BuildSupermicroX11SSH.outputs.binaryArtifact }}
+          name: ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
       - uses: geekyeggo/delete-artifact@v2
         with:
-          name:  ${{ needs.BuildSupermicroX11SSH.outputs.binaryArtifact }}
+          name:  ${{ needs.BuildUPSquared.outputs.binaryArtifact }}
       - uses: docker://firmwareci/uploader:v1.1
         with:
-          EMAIL: "coreboot@gmail.com"
-          PASSWORD: ${{ secrets.PASSWORD }}
+          EMAIL: "firmwareci@gmail.com"
+          PASSWORD: "firmwareci"
 
-          PROJECT_TOKEN: 01H14BK9864DDT45DX8TPM5WE0
+          PROJECT_TOKEN: 01H2B8VP5ZYQZD6DB25B6CNC6X
           COMMIT_HASH: ${{ github.sha }}
 
           BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
         
           PROTOCOL: local
-          API: http://relay.9esec.dev:8080
+          API: http://relay.9esec.dev:8081
+
+
+  # BuildSupermicroX11SSH:
+  #   needs:
+  #    - CloneAssets
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     binaryArtifact: ${{ env.artifact}}
+  #   steps:
+  #     - run: echo "artifact=x11ssh" >> $GITHUB_ENV
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         submodules: true
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: coreboot-assets
+  #         path: ./3rdparty/blobs/mainboard/
+  #     - name: Build Action
+  #       uses: ./.github/actions/buildX86
+  #       with:
+  #         config: config.supermicro.x11ssh.linuxboot
+  #         artifact-path: ${{ env.artifact }}
+
+  # UploadX11SSHBinary: 
+  #   needs: BuildSupermicroX11SSH
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v3
+  #       id: download
+  #       with:
+  #         name: ${{ needs.BuildSupermicroX11SSH.outputs.binaryArtifact }}
+  #     - uses: geekyeggo/delete-artifact@v2
+  #       with:
+  #         name:  ${{ needs.BuildSupermicroX11SSH.outputs.binaryArtifact }}
+  #     - uses: docker://firmwareci/uploader:v1.1
+  #       with:
+  #         EMAIL: "coreboot@gmail.com"
+  #         PASSWORD: ${{ secrets.PASSWORD }}
+
+  #         PROJECT_TOKEN: 01H14BK9864DDT45DX8TPM5WE0
+  #         COMMIT_HASH: ${{ github.sha }}
+
+  #         BINARY_PATH: ${{steps.download.outputs.download-path}}/coreboot.rom
+        
+  #         PROTOCOL: local
+  #         API: http://relay.9esec.dev:8080
 
   RemoveAssets:
     needs:
       - BuildQemuX86
-      - BuildSupermicroX11SSH
-#      - BuildUPSquared
+      # - BuildSupermicroX11SSH
+      - BuildUPSquared
     runs-on: ubuntu-latest
     steps:
       - uses: geekyeggo/delete-artifact@v2
